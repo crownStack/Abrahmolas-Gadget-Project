@@ -27,6 +27,7 @@ const Signup = () => {
         country: '',
         contact: ''
     });
+    const [serverError, setServerError] = useState('');
 
     const navigate = useNavigate();
 
@@ -41,6 +42,7 @@ const Signup = () => {
     //Submit button
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setServerError('');
 
         let newErrors = { 
             email: '',
@@ -90,27 +92,33 @@ const Signup = () => {
         if(newErrors.email || newErrors.firstName || newErrors.lastName || newErrors.homeAddress || newErrors.town || newErrors.state || newErrors.country || newErrors.contact) return;
 
         try {
+            const payload = {
+                ...formData,
+                email: formData.email.trim().toLowerCase(),
+                contact: String(formData.contact).replace(/\D/g, '')
+            };
+
             const response = await fetch("http://localhost:5000/SignUp", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
                 },
-            body: JSON.stringify(formData)
-        });
+                body: JSON.stringify(payload)
+            });
 
-        const data = await response.json();
+            const data = await response.json();
 
-        if (!response.ok) {
-        alert(data.message || "Signup failed");
-        return;
-        }
+            if (!response.ok) {
+                setServerError(data.message || data.error || "This email or phone number is already registered.");
+                return;
+            }
 
-        console.log("Signup success:", data);
-        localStorage.setItem("formData", JSON.stringify(formData));
-        navigate("/SignupPassword");
+            console.log("Signup success:", data);
+            localStorage.setItem("signupData", JSON.stringify(payload));
+            navigate("/SignupPassword");
         } catch (error) {
             console.error("Signup error:", error);
-            alert("Something went wrong while signing up");
+            setServerError("We could not complete your signup. Please try again.");
         }
     }
 
@@ -179,6 +187,7 @@ const Signup = () => {
                                     </div>
                                 </div>
                             </div>
+                                {serverError && <p className="form-server-error" role="alert">{serverError}</p>}
                             <button type="submit">Continue</button>
                         </form>
                     </div>

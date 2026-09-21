@@ -1,7 +1,7 @@
 import Footer from "./Footer";
 import images from "../images/AbrahamolaLogo.png";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const Login = () => {
     const [ formData, setFormData ] = useState({
@@ -13,6 +13,7 @@ const Login = () => {
         email: '', 
         password: '' 
     });
+    const [serverError, setServerError] = useState('');
     const navigate = useNavigate();
 
     const handleChange = (e) => {
@@ -22,8 +23,9 @@ const Login = () => {
         })
     }
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        setServerError('');
 
         let newError = { email: '', password: '' }
 
@@ -38,7 +40,29 @@ const Login = () => {
         setError(newError)
         if(newError.email || newError.password) return;
 
-        navigate('/');
+        try {
+            const response = await fetch("http://localhost:5000/SignIn", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+            body: JSON.stringify(formData)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) { 
+        setServerError(data.message || "We could not sign you in. Please check your details and try again.");
+        return;
+        }
+
+        console.log("Signin success:", data);
+        localStorage.setItem("signinData", JSON.stringify(data.user));
+        navigate("/Home");
+        } catch (error) {
+            console.error("Signin error:", error);
+            setServerError("We could not sign you in right now. Please try again.");
+        }
     }
 
     return (
@@ -70,8 +94,9 @@ const Login = () => {
                                 { error.password && <p style={{ color: 'red', fontSize: '12px', fontWeight: 'bold', textAlign: 'left', position: 'relative', top: '-13px'}}>{error.password}</p> }
                             </div>
                         </div>
+                        {serverError && <p className="form-server-error" role="alert">{serverError}</p>}
                         <button type="submit">Sign in</button><br />
-                        <p>Forgot Password?</p>
+                        <Link to="/CodeRequest">Forgot Password?</Link>
                     </form>
                 </div>
             </section>

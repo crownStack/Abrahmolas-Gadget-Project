@@ -6,11 +6,12 @@ import { useNavigate } from 'react-router-dom'
 const Password = () => {
     const [ formData, setFormData ] = useState({
         createPassword: "",
-        comfirmPassword: ""
+        confirmPassword: ""
     });
     const [ showPassword, setShowPasword ] = useState(false);
 
-    const [ error, setError ] = useState('');
+    const [ error, setError ] = useState({ createPassword: '' });
+    const [serverError, setServerError] = useState('');
     const navigate = useNavigate();
 
     const handleChange = (e) => {
@@ -22,46 +23,51 @@ const Password = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setServerError('');
 
-        let newError = {
-            createPassword: "",
-            comfirmPassword: ""
-        }
+        let newError = { createPassword: "" }
 
         if(!formData.createPassword || formData.createPassword.length < 6) {
             newError.createPassword = 'password must at least 6 characters'
         }
 
-         if (formData.comfirmPassword !== formData.createPassword) {
-            newError.comfirmPassword = 'password not match'
-        } 
+        if(formData.createPassword !== formData.confirmPassword) {
+            newError.createPassword = 'passwords do not match'
+        }
 
         setError(newError);
 
-        if(!formData.createPassword || !formData.comfirmPassword) return;
+        if(newError.createPassword) return;
 
         try {
+            const savedSignupData = JSON.parse(localStorage.getItem("signupData") || localStorage.getItem("formData") || "{}");
+            const finalData = {
+                ...savedSignupData,
+                createPassword: formData.createPassword,
+                confirmPassword: formData.confirmPassword
+            };
+
             const response = await fetch("http://localhost:5000/Password", {
                 method: "POST",
                 headers: {
                     "Content-Type" : "application/json"
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(finalData)
             });
 
             const data = await response.json();
 
             if (!response.ok) {
-                alert(data.message || "Password failed");
+                setServerError(data.error || data.message || "We could not save your password. Please try again.");
                 return;
             }
             
             console.log("Password success:", data);
-            localStorage.setItem("formData", JSON.stringify(formData));
+            localStorage.setItem("signupData", JSON.stringify(finalData));
             navigate("/Signin");
             } catch (error) {
                 console.error("Password error:", error);
-                alert("Something went wrong while signing up");
+                setServerError("We could not complete your signup. Please try again.");
             }
         }
 
@@ -80,21 +86,21 @@ const Password = () => {
                             <div className="formGroup">
                                 <label htmlFor="createPassword">Create a new Password</label><br />
                                 <div className="loginPassword">
-                                    <input type="password" value={formData.createPassword} onChange={handleChange} name="createPassword" id="createPassword" placeholder="Enter a strong password" />
+                                    <input type={ showPassword ? "text" : "password" } value={formData.createPassword} onChange={handleChange} name="createPassword" id="createPassword" placeholder="Enter a strong password" />
                                 </div>
-                                {error.createPassword && <p>{error.createPassword}</p>}
+                                {error.createPassword && <p style={{ color: 'red', fontSize: '12px', fontWeight: 'bold' }}>{error.createPassword}</p>}
                             </div>
 
                             <div className="formGroup">
-                                <label htmlFor="Password">Password</label><br />
+                                <label htmlFor="confirmPassword">Confirm Password</label><br />
                                 <div className="loginPassword">
-                                    <input type={ showPassword ? "text" : "password" } value={formData.comfirmPassword} onChange={handleChange} name="comfirmPassword" id="comfirmPassword" placeholder="Enter your password" />
+                                    <input type={ showPassword ? "text" : "password" } value={formData.confirmPassword} onChange={handleChange} name="confirmPassword" id="confirmPassword" placeholder="Re-enter your password" />
                                 <span onClick={ () => setShowPasword(!showPassword)} style={{cursor: "pointer", fontSize: "30px", color: "black"}}>👁</span></div>
-                                {error.comfirmPassword && <p>{error.comfirmPassword}</p>}
                             </div>
                         </div>
+                        {serverError && <p className="form-server-error" role="alert">{serverError}</p>}
                         <button type="submit">Create your Account</button>
-                        <p>By creating an account you agree to our <br /> <span>Terms of service and privacy Policy.</span></p>
+                        <p className="signup-password-terms">By creating an account you agree to our <br /> <span>Terms of service and privacy Policy.</span></p>
                     </form>
                 </div>
             </section>
